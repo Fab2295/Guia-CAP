@@ -1,11 +1,7 @@
-### Criado por:
-- Dalcy Fabrício de Medeiros Neto
-- Pedro Lázaro 
-
----
-
 # Sumário
 
+- [Sumário](#sum-rio)
+- [Criadores](#criadores)
 - [Convenção de nomenclatura](#convenção-de-nomenclatura)
   * [Variáveis](#variáveis)
   * [Funções](#funções)
@@ -16,22 +12,34 @@
   * [Métodos privadas](#métodos-privadas)
   * [Array](#array)
   * [Comentários](#comentários)
-- [Handler](#handler)
+- [Custom Handler](#custom-handler)
+  * [Criando um handler](#criando-um-handler)
+    + [Via CLI](#via-cli)
 - [Teste Híbrido](#teste-híbrido)
+  * [Conectar ao serviço no BTP](#conectar-ao-serviço-no-btp)
 - [Deploy Cloud Foundry](#deploy-cloud-foundry)
-  * [Para versão @sap/cds-dk >= 8.9](#para-vers-o-sap-cds-dk-89)
+  * [Pré-requisitos:](#pré-requisitos)
+  * [Para versão @sap/cds-dk >= 8.9](#para-versão-@sap-/-cds-dk-89)
   * [Para a versão @sap/cds-dk < 8.9](#para-a-vers-o-sap-cds-dk-89)
   * [Via CAP Console](#via-cap-console)
+- [Debug remoto Cloud Foundry](#debug-remoto-cloud-foundry)
+  * [Pré-requisito](#pr-requisito)
+  * [Para versão @sap/cds-dk >= 8.5](#para-versão-sap-cds-dk-85)
+  * [Para versão @sap/cds-dk < 8.5](#para-versão-sap-cds-dk-85)
 - [Zona de Perigo](#zona-de-perigo)
   * [SQL Injection](#sql-injection)
-    + [Como não fazer](#como-n-o-fazer)
+    + [Como não fazer](#como-não-fazer)
     + [Como prevenir](#como-prevenir)
   * [Condição de corrida](#condição-de-corrida)
-    + [Como pode ser gerado](#como-pode-ser-gerado)
+    + [Como pode ser gerado via](#como-pode-ser-gerado-via)
     + [Como evitar](#como-evitar)
   
   <br>
   <br>
+  
+# Criadores:
+- Dalcy Fabrício de Medeiros Neto
+- Pedro Lázaro 
   
 # Convenção de nomenclatura
 
@@ -187,15 +195,94 @@ let x = 0;
 > Se a lógica for algo difícil de entender e/ou depende de regras complexas aí é bom colocar comentários com uma explicação mais detalhada para quando outro desenvolvedor for precisar entender seu código ele já tem uma explicação detalhada.
 
 
-# Handler
+# Custom Handler
 
+É uma forma de estender comportamentos padrões ou criar novos comportamentos programaticamente, via NodeJS ou java.
+
+> Tente fazer o mais standard possivel, via anotações já existentes, só implemente um handler caso o standard não seja capaz de cubrir seu cenário
+
+## Criando um handler
+
+### Via CLI 
+
+Uma maneira de criar uma casca do handler mais rápido é via um novo comando do cds add.
+
+> Só foi adicionado a partir da versão @sap/cds-dk >= 8.5.0
+
+Para criar via cli é necessário, além da versão, ter uma definifição de serviço no seu ```srv/``. Exemplo:
+
+> Caso não possua pelo menos uma definição de serviço o comando gerará a mensagem: skipping, no model found
+
+> É só um exemplo, pode ter N variações 
+
+```cds
+service MeuServico {
+    entity Entidade as projection on Entidade;  
+}
+```
+
+Com sua definição de serviço rode o comando:
+
+```bash
+cds add handler
+```
+
+será criado um arquivo com o nome do arquivo do seu serviço ou o que estiver na anotaçao ```@impl: 'nome-handler'```
+
+> Será criado de forma generica, não espere que o comando vá implementar lógicas complexas. 
+
+Arquivo gerado:
+
+```js
+import cds from '@sap/cds'
+
+export class MyService extends cds.ApplicationService { 
+
+init() {
+  this.before (['CREATE', 'UPDATE'], Products, async (req) => {
+    console.log('Before CREATE/UPDATE Products', req.data)
+  })
+  this.after ('READ', Products, async (products, req) => {
+    console.log('After READ Products', products)
+  })
+
+
+  return super.init()
+}}
+```
 
 # Teste Híbrido
+
+Teste híbrido é uma forma de testar localmente via VSCode/BAS conectado a algum serviço do BTP.
+
+> Para conseguir conectar seu projeto CAP a um serviço do BTP é preciso fazer o login via ```cf login```
+
+## Conectar ao serviço no BTP
+
+Para fazer o teste híbrido com um serviço no BTP, tipo: Hana
+
+Rode o comando abaixo para criar a configuração de conexão.
+
+> Esse comando vai gerar as configurações de acesso ao serviço em um arquivo chamado cdsrc-private.json
+
+> Coloque ele no .gitignore para que não suba dado sensivel
+
+```bash
+cds bind -2 <servico-btp>
+```
+
+Com o sucesso, voccê pode rodar o comando:
+
+```bash
+cds watch --profile hybrid
+```
+
+Com isso irá se conectar ao serviço desejado e você poderá testar sem precisar deployar.
 
 
 # Deploy Cloud Foundry
 
-Pré-requisitos para seguir:
+## Pré-requisitos:
 
 Rodar o comando:
 
@@ -217,11 +304,12 @@ Depois de logado, rode o comando:
 
 > Certifique-se de está logado na subaccount certa para evitar deployar no ambiente errado, para verificar se está logado certo, rode o comando ``` cf target ```
 
+>  Aguarde o deploy ser concluido, em caso de erro verificar o log da aplicação
+
+
 ```bash
 cds up
 ```
-
-> Aguarde o deploy ser concluido, em caso de erro verificar o log da aplicação
 
 ## Para a versão @sap/cds-dk < 8.9
 
@@ -246,7 +334,7 @@ mbt build
 
 Depois que criar o arquivo pode rodar o comando:
 
-> O comando deploy do cf não existe por padrão (fora do BAS), para isso precisa instalar um plugin, para isso consulte: https://cap.cloud.sap/docs/guides/deployment/to-cf#prerequisites 
+> O comando deploy do cf não existe por padrão (fora do BAS), para isso precisa instalar um plugin, consulte: https://cap.cloud.sap/docs/guides/deployment/to-cf#prerequisites 
 
 ```bash
 cf deploy <caminho>/<arquivo.mtar|tar>
@@ -256,7 +344,7 @@ Aguarde o deploy ser concluido e em caso de erro consultar o log do terminal ou 
 
 ## Via CAP Console 
 
-> É uma ferramenta nova bugs podem acontecer\
+> É uma ferramenta nova bugs podem acontecer...
 
 Também pode olhar um novo programa desktop desenvolvido pela SAP chamado CAP Console:
 
@@ -269,6 +357,149 @@ Um exemplo de como é a tela e dá para fazer várias coisinhas nele além de de
 npm i @cap-js/console
 ```
 
+# Debug remoto Cloud Foundry
+
+Dependendo do cenário temos que debugar, nem sempre conseguimos debugar de forma hibrida, ai para isso existe o debug via tunelamento de SSH.
+
+## Pré-requisito 
+
+Primeiro verifique se o ssh está habilitado para o space e aplicação.
+
+Primeiro faça o login: 
+
+```bash
+cf login
+```
+
+Verifique se o space está com o suporte a SSH ligado
+
+```bash
+cf space-ssh-allowed <nome-space>
+```
+
+Caso não esteja, rode o comando:
+
+```bash
+cf allow-space-ssh <nome-espace>
+```
+
+Verifique se a aplicação está com o suporte a SSH habilitado, para isso rode: 
+
+```bash
+cf ssh-enabled <sua-aplicação>
+```
+
+caso não esteja ligado, rode:
+
+```bash
+cf enable-ssh <sua-aplicação>
+```
+
+Com sucesso, precisará reiniciar a aplicação, para isso rode:
+
+```bash
+cf restart <sua-aplicação>
+```
+
+Adicione a configuração do debug remoto (esse passo não precisa ser o último, não depende dos passos anteriores para ser feito).
+No caminho .vscode/launch.json gere essa configuração:
+
+> Adicione toda a configuração, mas o que seria necessario para nosso debug é a primeira configuraçõ da propriedade ```configurations```
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "address": "127.0.0.1",
+      "localRoot": "${workspaceFolder}",
+      "name": "Attach to Remote",
+      "port": 9229,
+      "remoteRoot": "Absolute path to the remote directory containing the program",
+      "request": "attach",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node"
+    },
+    {
+      "name": "cds serve",
+      "request": "launch",
+      "type": "node",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "cds",
+      "args": [
+        "serve",
+        "--with-mocks",
+        "--in-memory?"
+      ],
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}
+
+```
+
+## Para versão @sap/cds-dk >= 8.5
+
+Rode o comando:
+
+> Simples assim, porém ele não funciona bem no BAS, pois o comando tenta abrir o chrome, e no BAS ele não consegue, então rode no VSCode
+
+```bash
+cds debug <nome-aplicação-deployada>
+```
+
+## Para versão @sap/cds-dk < 8.5
+
+Para versões menores é um pouco mais trabalhoso.
+
+> Verifique os pré-requisitos para habilitar o ssh
+
+```bash
+cf ssh <sua-aplicação>
+```
+
+caso ocorra sucesso, você estará conectado ao terminal remoto. Agora rode:
+
+```bash
+ps aux | grep node
+```
+
+Encontre o processo do node que roda o cds-serve, encontrando ele pegue o id do processo. No meu caso é o ID 263 (esse ID não é fixo, pode e vai mudar) e rode o comando:
+
+```bash
+kill -usr1 <id>
+```
+
+Abra outro terminal e rode:
+
+> A porta 9229 é a porta padrão do debugger do NodeJS
+
+> 127.0.0.1 é o endereço de loopback, também conhecido como localhost
+
+> Variação do comando mais famosa é por o -N para não abrir o terninal remoto 
+
+```bash
+cf ssh <sua-aplicação> -L 9229:127.0.0.1:9229
+```
+
+Agora escolha no menu do debug do VSCode/BAS e escolha a config do debug remoto (passo no pré-requisito)
+
+![](assets/17665521691792.jpg)
+
+
+
+Depois é so abrir o loaded scripts e vê os arquivos remotos e colocar break onde achar necessário.
+
+![](assets/17665524886600.jpg)
+
+
+
+<br>
+<br>
 
 # Zona de Perigo
 
@@ -335,7 +566,7 @@ this.on('Acao', async (req) => {
 
 Uma condição de corrida ocorre quando duas ou mais operações acontecem ao mesmo tempo, e o resultado depende de qual delas termina primeiro.
 
-### Como pode ser gerado
+### Como pode ser gerado via
 
 usar await em eventos sincronos
 
