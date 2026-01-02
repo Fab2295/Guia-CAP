@@ -19,9 +19,9 @@
     + [On](#on)
     + [After](#after)
 - [Teste Híbrido](#teste-híbrido)
-  * [Conectar ao serviço no BTP](#conectar-ao-servi-o-no-btp)
+  * [Conectar ao serviço no BTP](#conectar-ao-serviço-no-btp)
 - [Deploy Cloud Foundry](#deploy-cloud-foundry)
-  * [Pré-requisitos:](#pr-requisitos)
+  * [Pré-requisitos:](#pré-requisitos)
   * [Para versão @sap/cds-dk >= 8.9](#para-vers-o-sap-cds-dk-89)
   * [Para a versão @sap/cds-dk < 8.9](#para-a-vers-o-sap-cds-dk-89)
   * [Via CAP Console](#via-cap-console)
@@ -31,12 +31,12 @@
   * [Para versão @sap/cds-dk < 8.5](#para-vers-o-sap-cds-dk-85)
 - [Zona de Perigo](#zona-de-perigo)
   * [SQL Injection](#sql-injection)
-    + [Como não fazer](#como-n-o-fazer)
+    + [Como não fazer](#como-não-fazer)
     + [Como prevenir](#como-prevenir)
-  * [Condição de corrida](#condi-o-de-corrida)
+  * [Condição de corrida](#condição-de-corrida)
     + [Via eventos sincronos](#via-eventos-sincronos)
       - [Evitando:](#evitando)
-    + [Via mais de um after em uma mesma requisição:](#via-mais-de-um-after-em-uma-mesma-requisi-o)
+    + [Via mais de um after em uma mesma requisição:](#via-mais-de-um-after-em-uma-mesma-requisição)
     + [Via estados compartilhados](#via-estados-compartilhados)
 
   
@@ -642,6 +642,52 @@ this.after('READ', this.entities.Tabela, (data, req) => {
 })
 ```
 
+Ao invés de usar mais de 2 READ`s fazer tudo em um ou usar o:
+
+> o ```each```é chamado a cada linha 
+
+```js
+this.after(`each`, this.entities.Tabela, (data, req) => {
+...
+})
+```
+
 ### Via estados compartilhados
 
 Em construção
+
+## Package-lock
+
+O ```package-lock.json``` é o arquivo que congela exatamente quais versões dos pacotes o seu projeto Node.js usa.
+
+O problema que ele resolve
+
+No ```package.json``` você normalmente tem algo assim:
+
+```json
+"dependencies": {
+  "express": "^4.18.2"
+}
+```
+
+Isso significa:
+
+- pode instalar 4.18.2
+
+- ou 4.18.3
+
+- ou 4.19.0 (dependendo da regra)
+
+Resultado:
+
+- na sua máquina funciona
+
+- no servidor quebra
+
+- no CI falha
+
+- bug fantasma
+
+### Evitando problemas
+
+Evite apagar o package-lock e instalar novamente. Uma situação que pode ocorrer é estar usando a versão ```ˆ1.0.0``` e apague seu lock e rode o ```npm i```e ele instale a versão ```2.0.1``` exemplo, só que essa versão de algum modo não funciona bem com o seu software e assim quebraria.
