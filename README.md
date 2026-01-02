@@ -446,7 +446,8 @@ No caminho .vscode/launch.json gere essa configuração:
 
 Rode o comando:
 
-> Simples assim, porém ele não funciona bem no BAS, pois o comando tenta abrir o chrome, e no BAS ele não consegue, então rode no VSCode
+> Simples assim, porém ele não funciona bem no BAS, pois o comando tenta abrir o chrome, e no BAS ele não consegue.
+> Caso precise rodar no BAS, precisa adicionar um complemento no comando: cds debug <nome-aplicação-deployada> --no-devtools
 
 ```bash
 cds debug <nome-aplicação-deployada>
