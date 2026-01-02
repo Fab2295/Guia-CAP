@@ -1,11 +1,10 @@
 # Sumário
 
-- [Sumário](#sum-rio)
-- [Criadores](#criadores)
+- [Criadores:](#criadores)
 - [Convenção de nomenclatura](#convenção-de-nomenclatura)
   * [Variáveis](#variáveis)
   * [Funções](#funções)
-    + [Parâmetros](#parâmetros)
+    + [Parâmetros](#parêmetros)
   * [Constante](#constante)
   * [Objetos](#objetos)
   * [Classes](#classes)
@@ -15,24 +14,31 @@
 - [Custom Handler](#custom-handler)
   * [Criando um handler](#criando-um-handler)
     + [Via CLI](#via-cli)
+  * [Ciclo de vida de uma requisição](#ciclo-de-vida-de-uma-requisição)
+    + [Before](#before)
+    + [On](#on)
+    + [After](#after)
 - [Teste Híbrido](#teste-híbrido)
-  * [Conectar ao serviço no BTP](#conectar-ao-serviço-no-btp)
+  * [Conectar ao serviço no BTP](#conectar-ao-servi-o-no-btp)
 - [Deploy Cloud Foundry](#deploy-cloud-foundry)
-  * [Pré-requisitos:](#pré-requisitos)
-  * [Para versão @sap/cds-dk >= 8.9](#para-versão-@sap-/-cds-dk-89)
+  * [Pré-requisitos:](#pr-requisitos)
+  * [Para versão @sap/cds-dk >= 8.9](#para-vers-o-sap-cds-dk-89)
   * [Para a versão @sap/cds-dk < 8.9](#para-a-vers-o-sap-cds-dk-89)
   * [Via CAP Console](#via-cap-console)
 - [Debug remoto Cloud Foundry](#debug-remoto-cloud-foundry)
   * [Pré-requisito](#pr-requisito)
-  * [Para versão @sap/cds-dk >= 8.5](#para-versão-sap-cds-dk-85)
-  * [Para versão @sap/cds-dk < 8.5](#para-versão-sap-cds-dk-85)
+  * [Para versão @sap/cds-dk >= 8.5](#para-vers-o-sap-cds-dk-85)
+  * [Para versão @sap/cds-dk < 8.5](#para-vers-o-sap-cds-dk-85)
 - [Zona de Perigo](#zona-de-perigo)
   * [SQL Injection](#sql-injection)
-    + [Como não fazer](#como-não-fazer)
+    + [Como não fazer](#como-n-o-fazer)
     + [Como prevenir](#como-prevenir)
-  * [Condição de corrida](#condição-de-corrida)
-    + [Como pode ser gerado via](#como-pode-ser-gerado-via)
-    + [Como evitar](#como-evitar)
+  * [Condição de corrida](#condi-o-de-corrida)
+    + [Via eventos sincronos](#via-eventos-sincronos)
+      - [Evitando:](#evitando)
+    + [Via mais de um after em uma mesma requisição:](#via-mais-de-um-after-em-uma-mesma-requisi-o)
+    + [Via estados compartilhados](#via-estados-compartilhados)
+
   
   <br>
   <br>
@@ -251,6 +257,36 @@ init() {
 }}
 ```
 
+## Ciclo de vida de uma requisição
+
+Toda requisição disparada ao CAP se comporta obdecendo o seguinte padrão: before -> on -> after
+
+### Before
+
+O before(antes), como o nome já diz, ele acontece antes do objetivo da requisição, exemplo: um post na entidade, vai criar dados em uma tabela, o evento before acontece antes de ser inserido de fato no banco de dados.
+
+Ela é ideal para validação de dados.
+
+> O primeiro argumento pode ser '*' (representa todos os eventos) ou [] (representa um array de eventos) ou simplesmente um único evento 
+
+> Lembrando que o caso de validação de obrigatoriedade de campo pode ser feito via anotação @mandatory, não é preciso por esse tipo de validação em código e com isso é gerado menos códigos.  
+
+```js
+this.before('CREATE', 'Entidade', (req) => {
+    if(!req.data.campo) return req.reject(400, 'Campo não pode ser vazio')
+})
+```
+
+### On
+
+Em construção
+
+### After
+
+Em construção
+
+
+
 # Teste Híbrido
 
 Teste híbrido é uma forma de testar localmente via VSCode/BAS conectado a algum serviço do BTP.
@@ -447,7 +483,7 @@ No caminho .vscode/launch.json gere essa configuração:
 Rode o comando:
 
 > Simples assim, porém ele não funciona bem no BAS, pois o comando tenta abrir o chrome, e no BAS ele não consegue.
-> Caso precise rodar no BAS, precisa adicionar um complemento no comando: cds debug <nome-aplicação-deployada> --no-devtools
+> Para rodar no BAS precisa adicionar um complemento, para isso, rode: ```cds debug <nome-aplicação-deployada> --no-devtools``
 
 ```bash
 cds debug <nome-aplicação-deployada>
@@ -489,14 +525,12 @@ cf ssh <sua-aplicação> -L 9229:127.0.0.1:9229
 
 Agora escolha no menu do debug do VSCode/BAS e escolha a config do debug remoto (passo no pré-requisito)
 
-![](assets/17665521691792.jpg)
-
+<img width="567" height="721" alt="image" src="https://github.com/user-attachments/assets/3290b016-fe43-4c52-9afa-86cdfd98c450" />
 
 
 Depois é so abrir o loaded scripts e vê os arquivos remotos e colocar break onde achar necessário.
 
-![](assets/17665524886600.jpg)
-
+<img width="567" height="721" alt="image" src="https://github.com/user-attachments/assets/101441d9-814e-43f8-a213-38f142d35aff" />
 
 
 <br>
@@ -567,7 +601,7 @@ this.on('Acao', async (req) => {
 
 Uma condição de corrida ocorre quando duas ou mais operações acontecem ao mesmo tempo, e o resultado depende de qual delas termina primeiro.
 
-### Como pode ser gerado via
+### Via eventos sincronos 
 
 usar await em eventos sincronos
 
@@ -581,7 +615,18 @@ cds.on('served', async ()=>{
 })
 ```
 
-Via mais de um after em uma mesma requisição:
+#### Evitando:
+
+Uso do cds.services 
+
+```js
+cds.on('served', ()=>{
+  const { db } = cds.services
+  db.on('before',(req)=> console.log(req.event, req.path))
+})
+```
+
+### Via mais de um after em uma mesma requisição:
 
 > Todos os manipuladores .after são executados em paralelo, o que pode levar a condições de corrida caso vários manipuladores se apliquem à mesma requisição. Portanto, use com cautela!
 
@@ -597,30 +642,6 @@ this.after('READ', this.entities.Tabela, (data, req) => {
 })
 ```
 
-### Como evitar
+### Via estados compartilhados
 
-Uso do cds.services 
-
-```js
-cds.on('served', ()=>{
-  const { db } = cds.services
-  db.on('before',(req)=> console.log(req.event, req.path))
-})
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Em construção
