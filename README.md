@@ -38,6 +38,8 @@
       - [Evitando:](#evitando)
     + [Via mais de um after em uma mesma requisição:](#via-mais-de-um-after-em-uma-mesma-requisição)
     + [Via estados compartilhados](#via-estados-compartilhados)
+  * [Package-lock](#package-lock)
+    + [Evitando Problemas](#evitando-problemas)
 
   
   <br>
